@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Квиз по правилам хоккея</title>
+<style>
+  :root{
+    --bg:#0d1b2a; --card:#15243b; --card2:#1b2f4d; --accent:#4db8ff;
+    --accent2:#2f8fdd; --text:#e8f1fa; --muted:#8aa3bd;
+    --ok:#2ecc71; --ok-bg:#123d24; --bad:#e74c3c; --bad-bg:#43161a;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:'Segoe UI', Roboto, Arial, sans-serif; background:linear-gradient(160deg,#0d1b2a 0%,#13294b 60%,#0d1b2a 100%); color:var(--text); min-height:100vh;}
+  header{display:flex; align-items:center; gap:12px; padding:14px 16px; border-bottom:1px solid #22395c; position:sticky; top:0; background:rgba(13,27,42,.95); backdrop-filter:blur(4px); z-index:10;}
+  header .logo{font-size:28px;}
+  header h1{font-size:20px; line-height:1.2;}
+  nav{margin-left:auto; display:flex; gap:14px;}
+  nav a{color:var(--muted); text-decoration:underline; cursor:pointer; font-size:14px; white-space:nowrap;}
+  nav a.active{color:var(--accent);}
+  main{max-width:680px; margin:0 auto; padding:16px;}
+  .card{background:var(--card); border:1px solid #24405f; border-radius:16px; padding:24px 20px; text-align:center; margin-top:16px;}
+  .hero-emoji{font-size:52px; margin-bottom:12px;}
+  h2{font-size:26px; margin-bottom:10px;}
+  .subtitle{color:var(--muted); line-height:1.5; margin-bottom:18px;}
+  .btn{display:inline-block; background:linear-gradient(90deg,var(--accent),var(--accent2)); color:#04121f; font-weight:700; border:none; border-radius:12px; padding:14px 34px; font-size:17px; cursor:pointer; transition:transform .15s, box-shadow .15s;}
+  .btn:hover{transform:translateY(-2px); box-shadow:0 6px 18px rgba(77,184,255,.35);}
+  .btn.secondary{background:#23405f; color:var(--text); font-weight:500;}
+  .btn.danger{background:#5c2330; color:#ff9b9b;}
+  .btn:disabled{opacity:.5; cursor:default; transform:none;}
+  .status{margin-top:18px; padding:12px 14px; border-radius:10px; font-size:14px; line-height:1.5;}
+  .status.ok{background:#123d24; color:#a8e6c1;}
+  .status.err{background:#43161a; color:#ffb3a7; text-align:left;}
+  .status.load{background:#1b2f4d; color:var(--muted);}
+  .progress-wrap{height:8px; background:#22395c; border-radius:4px; overflow:hidden; margin-bottom:14px;}
+  .progress-bar{height:100%; background:linear-gradient(90deg,var(--accent),#7fd4ff); width:0; transition:width .3s;}
+  .qnum{color:var(--muted); font-size:13px; margin-bottom:6px;}
+  .question{font-size:20px; font-weight:600; line-height:1.45; margin-bottom:18px;}
+  .options{display:flex; flex-direction:column; gap:10px;}
+  .option{background:var(--card2); border:2px solid #2c4a70; color:var(--text); border-radius:12px; padding:14px 16px; font-size:16px; text-align:left; cursor:pointer; transition:background .2s, border-color .2s;}
+  .option:hover:not(:disabled){border-color:var(--accent);}
+  .option.correct{background:var(--ok-bg); border-color:var(--ok); color:#c9f5d9;}
+  .option.wrong{background:var(--bad-bg); border-color:var(--bad); color:#ffc9c2;}
+  .option:disabled{cursor:default;}
+  .explain{margin-top:16px; padding:14px; border-radius:10px; background:#1b2f4d; border-left:4px solid var(--accent); font-size:14px; line-height:1.55; text-align:left; color:var(--muted);}
+  .explain b{color:var(--text);}
+  .next-btn{margin-top:16px; width:100%;}
+  .score-big{font-size:46px; font-weight:800; color:var(--accent);}
+  .rank{font-size:20px; margin:8px 0 4px; font-weight:600;}
+  .rank-detail{color:var(--muted); margin-bottom:18px;}
+  .history-item{background:var(--card2); border-radius:12px; padding:14px; margin-bottom:10px; text-align:left;}
+  .history-item .date{font-weight:600; margin-bottom:4px;}
+  .history-item .meta{color:var(--muted); font-size:14px;}
+  .history-item .toggle{color:var(--accent); font-size:13px; cursor:pointer; margin-top:6px; text-decoration:underline;}
+  .history-detail{display:none; margin-top:10px; font-size:13px; color:var(--muted); border-top:1px dashed #2c4a70; padding-top:8px;}
+  .history-detail div{margin-bottom:6px;}
+  .history-detail .ok-c{color:#a8e6c1;} .history-detail .bad-c{color:#ffb3a7;}
+  .empty{color:var(--muted); text-align:center; padding:30px 10px;}
+  /* админка */
+  .login-box{max-width:340px; margin:40px auto;}
+  .field{margin-bottom:14px; text-align:left;}
+  .field label{display:block; font-size:13px; color:var(--muted); margin-bottom:5px;}
+  .field input, .field textarea, .field select{width:100%; background:#0f2035; border:1px solid #2c4a70; border-radius:8px; padding:11px 12px; color:var(--text); font-size:15px; font-family:inherit;}
+  .field textarea{resize:vertical; min-height:60px;}
+  .search-row{display:flex; gap:8px; margin-bottom:12px;}
+  .search-row input{flex:1; background:#0f2035; border:1px solid #2c4a70; border-radius:8px; padding:10px 12px; color:var(--text); font-size:14px;}
+  .q-list{max-height:480px; overflow-y:auto; text-align:left;}
+  .q-item{background:var(--card2); border-radius:10px; padding:10px 12px; margin-bottom:8px; font-size:13px;}
+  .q-item .q-text{margin-bottom:6px; line-height:1.4;}
+  .q-item .bad{color:#ff9b9b;}
+  .q-item .acts{display:flex; gap:10px;}
+  .q-item .acts a{color:var(--accent); cursor:pointer; text-decoration:underline; font-size:12px;}
+  .q-item .acts a.del{color:#ff9b9b;}
+  .admin-toolbar{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; justify-content:center;}
+  footer{max-width:680px; margin:20px auto 30px; padding:0 16px; color:#5c7591; font-size:12px; text-align:center;}
+  .hidden{display:none;}
+  .row-btns{display:flex; gap:10px; margin-top:16px; justify-content:center; flex-wrap:wrap;}
+  @media (max-width:520px){ header h1{font-size:16px;} nav{gap:9px;} nav a{font-size:12px;} }
+</style>
+</head>
+<body>
+<header>
+  <span class="logo">🏒</span>
+  <h1>Квиз по правилам хоккея</h1>
+  <nav>
+    <a id="nav-home" onclick="showScreen('home')">Главная</a>
+    <a id="nav-history" onclick="showScreen('history')">История</a>
+    <a id="nav-admin" onclick="showScreen('admin')">Админка</a>
+  </nav>
+</header>
+
+<main>
+  <!-- ГЛАВНАЯ -->
+  <section id="screen-home">
+    <div class="card">
+      <div class="hero-emoji">🏒</div>
+      <h2>Знаешь правила игры?</h2>
+      <p class="subtitle">30 случайных вопросов по правилам хоккея. Один раунд — 30 вопросов, без повторов. После каждого ответа — пояснение со ссылкой на пункт правил.</p>
+      <button class="btn" id="start-btn" onclick="startQuiz()">Начать</button>
+      <div id="load-status" class="status load">Загружаю вопросы из Google Таблицы…</div>
+    </div>
+  </section>
+
+  <!-- ВОПРОСЫ -->
+  <section id="screen-quiz" class="hidden">
+    <div class="progress-wrap"><div class="progress-bar" id="progress-bar"></div></div>
+    <div class="qnum" id="q-num"></div>
+    <div class="card" style="text-align:left;">
+      <div class="question" id="q-text"></div>
+      <div class="options" id="q-options"></div>
+      <div id="q-explain"></div>
+      <button class="btn next-btn hidden" id="next-btn" onclick="nextQuestion()">Далее →</button>
+    </div>
+  </section>
+
+  <!-- РЕЗУЛЬТАТ -->
+  <section id="screen-result" class="hidden">
+    <div class="card">
+      <div class="hero-emoji" id="res-emoji">🏆</div>
+      <div class="score-big" id="res-score"></div>
+      <div class="rank" id="res-rank"></div>
+      <div class="rank-detail" id="res-detail"></div>
+      <div class="row-btns">
+        <button class="btn" onclick="startQuiz()">Пройти ещё раз</button>
+        <button class="btn secondary" onclick="showScreen('home')">На главную</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ИСТОРИЯ -->
+  <section id="screen-history" class="hidden">
+    <h2 style="margin:18px 0 14px;">История прохождений</h2>
+    <div id="history-list"></div>
+    <div class="row-btns"><button class="btn secondary" onclick="clearHistory()">Очистить историю</button></div>
+  </section>
+
+  <!-- АДМИНКА: вход -->
+  <section id="screen-admin" class="hidden">
+    <div id="admin-login" class="login-box card">
+      <h2>Вход для администратора</h2>
+      <p class="subtitle">Введите логин и пароль.</p>
+      <div class="field"><label>Логин</label><input id="adm-login"></div>
+      <div class="field"><label>Пароль</label><input id="adm-pass" type="password"></div>
+      <button class="btn" onclick="adminLogin()">Войти</button>
+      <div id="adm-login-err" class="status err hidden" style="margin-top:14px;">Неверный логин или пароль.</div>
+    </div>
+    <div id="admin-panel" class="hidden">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin:18px 0 10px;">
+        <h2>Управление вопросами <span id="adm-count" style="color:var(--muted); font-size:14px;"></span></h2>
+        <a onclick="adminLogout()" style="color:var(--muted); cursor:pointer; text-decoration:underline; font-size:14px;">Выйти</a>
+      </div>
+      <div class="search-row">
+        <input id="adm-search" placeholder="Поиск по вопросам…" oninput="renderAdminList()">
+        <button class="btn secondary" onclick="adminAddNew()">+ Добавить</button>
+      </div>
+      <div class="q-list" id="adm-list"></div>
+      <div class="row-btns">
+        <button class="btn secondary" onclick="exportCSV()">Скачать CSV со всеми вопросами</button>
+        <button class="btn secondary" onclick="checkIntegrity()">Проверить корректность строк</button>
+      </div>
+      <div id="adm-msg" class="status ok hidden" style="margin-top:12px;"></div>
+      <!-- форма добавления/редактирования -->
+      <div id="adm-form" class="card hidden" style="text-align:left; margin-top:16px;">
+        <h3 id="adm-form-title" style="margin-bottom:12px;">Новый вопрос</h3>
+        <input type="hidden" id="f-id">
+        <div class="field"><label>Вопрос *</label><textarea id="f-q"></textarea></div>
+        <div class="field"><label>Вариант 1 *</label><input id="f-o1"></div>
+        <div class="field"><label>Вариант 2 *</label><input id="f-o2"></div>
+        <div class="field"><label>Вариант 3 *</label><input id="f-o3"></div>
+        <div class="field"><label>Правильный ответ (1, 2 или 3) *</label>
+          <select id="f-c"><option value="1">1</option><option value="2">2</option><option value="3">3</option></select>
+        </div>
+        <div class="field"><label>Объяснение (с пунктом правил)</label><textarea id="f-e"></textarea></div>
+        <div class="row-btns">
+          <button class="btn" onclick="adminSave()">Сохранить</button>
+          <button class="btn secondary" onclick="adminCloseForm()">Отмена</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>Хоккейный квиз · данные из Google Таблицы · история хранится в вашем браузере</footer>
+
+<script>
+'use strict';
+
+/* ================== НАСТРОЙКИ ================== */
+const SHEET_ID = '1YmvWcn996eByYYjVaTaVAvzKPtWACnSpTo_m-bXvhdU';
+
+/* Администраторы: поменяйте пароли на свои */
+const ADMINS = {
+  'admin1': 'hockey2024',
+  'admin2': 'hockey2024'
+};
+
+const QUESTIONS_PER_ROUND = 30;
+
+/* Ссылка на CSV (используется первым способом) */
+const CSV_URL = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/gviz/tq?tqx=out:csv&gid=0';
+/* JSONP-ссылка (второй способ, работает даже когда fetch блокирован) */
+const JSONP_URL = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/gviz/tq?tqx=out:json;responseHandler:hqzCb&gid=0&headers=1';
+
+/* ================== ДИАГНОСТИКА ================== */
+let diag = [];
+function diagAdd(s){ diag.push(s); }
+
+/* ================== УТИЛИТЫ ================== */
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function $(id){ return document.getElementById(id); }
+
+/* robust CSV parser */
+function parseCSV(text){
+  text = text.replace(/^\uFEFF/, '');
+  const rows=[]; let row=[], cur='', inQ=false;
+  for(let i=0;i<text.length;i++){
+    const ch=text[i];
+    if(inQ){
+      if(ch==='"'){ if(text[i+1]==='"'){ cur+='"'; i++; } else { inQ=false; } }
+      else cur+=ch;
+    } else {
+      if(ch==='"') inQ=true;
+      else if(ch===','){ row.push(cur); cur=''; }
+      else if(ch==='\n'){ row.push(cur); cur=''; rows.push(row); row=[]; }
+      else if(ch==='\r'){ /* skip */ }
+      else cur+=ch;
+    }
+  }
+  if(cur!=='' || row.length){ row.push(cur); rows.push(row); }
+  return rows.filter(r=>r.some(c=>String(c).trim()!==''));
+}
+
+/* ================== ЗАГРУЗКА ДАННЫХ ================== */
+let baseQuestions = [];      // вопросы из таблицы
+let questions = [];          // актуальные (с учётом правок админов)
+let loadMethod = '';
+
+function rowToQuestion(cells, rowNum){
+  if(cells.length < 6) return null;
+  const q  = String(cells[0]||'').trim();
+  const o1 = String(cells[1]||'').trim();
+  const o2 = String(cells[2]||'').trim();
+  const o3 = String(cells[3]||'').trim();
+  const corrRaw = String(cells[4]||'').trim();
+  const exp = String(cells[5]||'').trim();
+  if(!q || !o1 || !o2 || !o3) return null;
+  let correctIndex = -1;
+  const asNum = parseInt(corrRaw, 10);
+  if(String(asNum) === corrRaw && asNum>=1 && asNum<=3){ correctIndex = asNum-1; }
+  else {
+    const opts=[o1,o2,o3];
+    for(let i=0;i<3;i++){ if(opts[i].toLowerCase()===corrRaw.toLowerCase()){ correctIndex=i; break; } }
+  }
+  if(correctIndex<0) return null;
+  return { question:q, options:[o1,o2,o3], correctIndex:correctIndex, explanation:exp, id:'row'+rowNum, source:'sheet', row:rowNum };
+}
+
+function tableToQuestions(rows){
+  const out=[];
+  let start=0;
+  const h=rows[0]||[];
+  if(h.length>=6 && /вопрос/i.test(String(h[0]))) start=1;
+  for(let i=start;i<rows.length;i++){
+    const q=rowToQuestion(rows[i], i+1);
+    if(q) out.push(q);
+  }
+  return out;
+}
+
+function jsonToQuestions(data){
+  if(!data || !data.table || !Array.isArray(data.table.rows)) return [];
+  const rows=[];
+  const labels=(data.table.cols||[]).map(c=>String(c&&c.label||''));
+  if(labels.length>=6 && /вопрос/i.test(labels[0])){
+    rows.push(labels); // первая строка — заголовки
+  }
+  for(const r of data.table.rows){
+    const cells=(r.c||[]).map(c=>{ if(!c) return ''; const v=(c.f!=null?c.f:(c.v!=null?String(c.v):'')); return v; });
+    rows.push(cells);
+  }
+  return tableToQuestions(rows);
+}
+
+function hqzCb(data){ // обработчик JSONP
+  try{
+    if(data && data.status==='ok'){
+      const qs=jsonToQuestions(data);
+      if(qs.length){ baseQuestions=qs; loadMethod='JSONP (без CORS)'; }
+      else diagAdd('JSONP вернул ответ, но валидных строк не найдено (проверьте колонки).');
+    } else {
+      diagAdd('JSONP: Google вернул статус ошибки: '+(data&&data.errors&&data.errors.length?data.errors[0].detailed_message||data.errors[0].message:'неизвестно'));
+    }
+  }catch(e){ diagAdd('Ошибка разбора JSONP: '+e.message); }
+  window.__jsonpDone=true;
+}
+
+function loadJSONP(){
+  return new Promise((resolve)=>{
+    const s=document.createElement('script');
+    const timer=setTimeout(()=>{ if(!window.__jsonpDone){ diagAdd('JSONP: не дождались ответа за 12 секунд.'); cleanup(); resolve(false);} },12000);
+    function cleanup(){ clearTimeout(timer); s.remove(); try{ delete window.hqzCb; }catch(e){ window.hqzCb=undefined; } }
+    window.hqzCb=function(data){ cleanup(); hqzCb(data); resolve(baseQuestions.length>0); };
+    s.onerror=function(){ diagAdd('JSONP: браузер заблокировал запрос (ошибка сети или доступ не открыт).'); cleanup(); resolve(false); };
+    s.src=JSONP_URL;
+    document.head.appendChild(s);
+  });
+}
+
+async function loadQuestions(){
+  diag=[];
+  $('load-status').className='status load';
+  $('load-status').textContent='Загружаю вопросы из Google Таблицы…';
+  $('start-btn').disabled=true;
+  let ok=false;
+  // Способ 1: обычный fetch
+  try{
+    const resp=await fetch(CSV_URL);
+    if(resp.ok){
+      const text=await resp.text();
+      if(text && text.length>0 && !/^\s*<(!DOCTYPE|html)/i.test(text)){
+        const qs=tableToQuestions(parseCSV(text));
+        if(qs.length){ baseQuestions=qs; loadMethod='fetch (CSV)'; ok=true; }
+        else diagAdd('fetch CSV: ответ получен ('+text.length+' симв.), но валидных строк не найдено.');
+      } else diagAdd('fetch CSV: Google вернул HTML вместо CSV — доступ, вероятно, не открыт.');
+    } else diagAdd('fetch CSV: HTTP '+resp.status+' (доступ не открыт или таблица недоступна).');
+  }catch(e){ diagAdd('fetch CSV: запрос заблокирован или ошибка сети ('+(e.message||'CORS')+') — переключаюсь на резервный способ.'); }
+  // Способ 2: JSONP
+  if(!ok) ok=await loadJSONP();
+  if(ok){
+    questions=buildActiveQuestions();
+    $('load-status').className='status ok';
+    $('load-status').innerHTML='База загружена: <b>'+questions.length+'</b> вопросов ✅ &nbsp;<span style="opacity:.7">(способ: '+loadMethod+')</span>';
+    $('start-btn').disabled=false;
+  } else {
+    $('load-status').className='status err';
+    $('load-status').innerHTML='<b>Не удалось загрузить вопросы.</b><br>Проверьте: 1) таблице открыт доступ «Все, у кого есть ссылка» (Читатель или Редактор); 2) колонки: Вопрос, Вариант 1–3, Правильный ответ, Объяснение; 3) интернет-соединение.<br><br>Технические детали:<br>'+ (diag.length? diag.map(d=>'• '+esc(d)).join('<br>') : '• неизвестная ошибка') +'<br><br>ID таблицы: '+esc(SHEET_ID);
+    $('start-btn').disabled=true;
+  }
+}
+
+/* ================== ПРАВКИ АДМИНОВ (localStorage) ================== */
+const LS_OVERRIDES='hockeyQuizOverrides_v2';
+function getOverrides(){ try{ return JSON.parse(localStorage.getItem(LS_OVERRIDES)||'{"edits":{},"deleted":[],"added":[]}'); }catch(e){ return {edits:{},deleted:[],added:[]}; } }
+function setOverrides(o){ localStorage.setItem(LS_OVERRIDES, JSON.stringify(o)); }
+function buildActiveQuestions(){
+  const o=getOverrides();
+  let list=baseQuestions.filter(q=>!o.deleted.includes(q.id));
+  list=list.map(q=> o.edits[q.id] ? Object.assign({}, q, o.edits[q.id], {source:'sheet (правка)'}) : q);
+  for(const a of o.added) list.push(Object.assign({}, a, {source:'добавлен админом'}));
+  return list;
+}
+
+/* ================== КВИЗ ================== */
+let round=[], cur=0, score=0, roundLog=[];
+function startQuiz(){
+  if(!questions.length){ loadQuestions().then(()=>{ if(questions.length){ questions=buildActiveQuestions(); doStart(); } }); return; }
+  doStart();
+}
+function doStart(){
+  const pool = questions.length>QUESTIONS_PER_ROUND ? shuffle(questions).slice(0,QUESTIONS_PER_ROUND) : questions;
+  round = pool.map(q=>{
+    const order=shuffle([0,1,2]);
+    return { q:q, opts:order.map(i=>q.options[i]), correctPos:order.indexOf(q.correctIndex) };
+  });
+  cur=0; score=0; roundLog=[];
+  showScreen('quiz'); renderQuestion();
+}
+function renderQuestion(){
+  const item=round[cur];
+  $('q-num').textContent='Вопрос '+(cur+1)+' из '+round.length;
+  $('progress-bar').style.width=(cur/round.length*100)+'%';
+  $('q-text').textContent=item.q.question;
+  $('q-explain').innerHTML='';
+  $('next-btn').classList.add('hidden');
+  const box=$('q-options'); box.innerHTML='';
+  item.opts.forEach((opt,i)=>{
+    const b=document.createElement('button');
+    b.className='option'; b.textContent=(i+1)+'. '+opt;
+    b.onclick=()=>answer(i,b);
+    box.appendChild(b);
+  });
+}
+function answer(pos, btn){
+  const item=round[cur];
+  const buttons=$('q-options').children;
+  for(const b of buttons) b.disabled=true;
+  const ok=(pos===item.correctPos);
+  buttons[item.correctPos].classList.add('correct');
+  if(!ok) btn.classList.add('wrong'); else score++;
+  roundLog.push({ q:item.q.question, chosen:item.opts[pos], correct:item.opts[item.correctPos], ok:ok, explanation:item.q.explanation });
+  $('q-explain').innerHTML='<div class="explain">'+(ok?'<b>✅ Верно!</b> ':'<b>❌ Неверно.</b> Правильный ответ: <b>'+esc(item.opts[item.correctPos])+'</b>. ')+(item.q.explanation? esc(item.q.explanation):'')+'</div>';
+  $('progress-bar').style.width=((cur+1)/round.length*100)+'%';
+  if(cur+1<round.length){ $('next-btn').classList.remove('hidden'); $('next-btn').textContent='Далее →'; }
+  else { $('next-btn').classList.remove('hidden'); $('next-btn').textContent='Показать результат →'; $('next-btn').onclick=showResult; }
+}
+function nextQuestion(){ cur++; renderQuestion(); }
+function rankOf(p){
+  if(p>=90) return ['🏆','Главный арбитр! Блестящее знание правил.'];
+  if(p>=75) return ['🥇','Знаток правил! Уверенный уровень.'];
+  if(p>=60) return ['🥈','Хороший арбитр. Совсем немного до совершенства.'];
+  if(p>=40) return ['🥉','Уверенный старт. Правила поддаются — продолжайте!'];
+  return ['📋','Начинающий судья. Загляните в правила и попробуйте снова!'];
+}
+function showResult(){
+  const pct=Math.round(score/round.length*100);
+  const [emoji,rank]=rankOf(pct);
+  $('res-emoji').textContent=emoji;
+  $('res-score').textContent=score+' / '+round.length+' ('+pct+'%)';
+  $('res-rank').textContent=rank;
+  $('res-detail').textContent='Результат сохранён в истории этого браузера.';
+  saveHistory({ date:new Date().toLocaleString('ru-RU'), score:score, total:round.length, pct:pct, log:roundLog });
+  showScreen('result');
+}
+
+/* ================== ИСТОРИЯ ================== */
+const LS_HISTORY='hockeyQuizHistory_v2';
+function saveHistory(entry){
+  try{
+    const h=JSON.parse(localStorage.getItem(LS_HISTORY)||'[]');
+    h.unshift(entry); if(h.length>50) h.length=50;
+    localStorage.setItem(LS_HISTORY, JSON.stringify(h));
+  }catch(e){}
+}
+function getHistory(){ try{ return JSON.parse(localStorage.getItem(LS_HISTORY)||'[]'); }catch(e){ return []; } }
+function renderHistory(){
+  const h=getHistory(), box=$('history-list');
+  if(!h.length){ box.innerHTML='<div class="empty">Пока нет прохождений. Сыграйте первый раунд!</div>'; return; }
+  box.innerHTML=h.map((it,i)=>
+    '<div class="history-item"><div class="date">'+esc(it.date)+'</div><div class="meta">'+it.score+' из '+it.total+' — '+it.pct+'%</div>'+
+    '<div class="toggle" onclick="toggleDetail('+i+')">Показать разбор ответов</div>'+
+    '<div class="history-detail" id="hd'+i+'">'+ it.log.map(r=>'<div class="'+(r.ok?'ok-c':'bad-c')+'">'+(r.ok?'✅':'❌')+' '+esc(r.q)+'<br>Ваш ответ: '+esc(r.chosen)+(r.ok?'':'<br>Верно: '+esc(r.correct))+'</div>').join('') +'</div></div>'
+  ).join('');
+}
+function toggleDetail(i){ const d=$('hd'+i); d.style.display = d.style.display==='block' ? 'none':'block'; }
+function clearHistory(){ if(confirm('Удалить всю историю прохождений?')){ localStorage.removeItem(LS_HISTORY); renderHistory(); } }
+
+/* ================== АДМИНКА ================== */
+let adminAuthed=false;
+function adminLogin(){
+  const l=$('adm-login').value.trim(), p=$('adm-pass').value;
+  if(ADMINS[l] && ADMINS[l]===p){ adminAuthed=true; $('admin-login').classList.add('hidden'); $('admin-panel').classList.remove('hidden'); $('adm-login-err').classList.add('hidden'); renderAdminList(); }
+  else $('adm-login-err').classList.remove('hidden');
+}
+function adminLogout(){ adminAuthed=false; $('admin-panel').classList.add('hidden'); $('admin-login').classList.remove('hidden'); $('adm-pass').value=''; adminCloseForm(); }
+function adminAddNew(){ adminOpenForm(null); }
+function adminOpenForm(q){
+  $('adm-form').classList.remove('hidden');
+  if(q){ $('adm-form-title').textContent='Редактирование вопроса (строка '+(q.row||'—')+')'; $('f-id').value=q.id; $('f-q').value=q.question; $('f-o1').value=q.options[0]; $('f-o2').value=q.options[1]; $('f-o3').value=q.options[2]; $('f-c').value=String(q.correctIndex+1); $('f-e').value=q.explanation||''; }
+  else { $('adm-form-title').textContent='Новый вопрос'; $('f-id').value=''; $('f-q').value=''; $('f-o1').value=''; $('f-o2').value=''; $('f-o3').value=''; $('f-c').value='1'; $('f-e').value=''; }
+  $('adm-form').scrollIntoView({behavior:'smooth'});
+}
+function adminCloseForm(){ $('adm-form').classList.add('hidden'); }
+function adminSave(){
+  const q=$('f-q').value.trim(), o1=$('f-o1').value.trim(), o2=$('f-o2').value.trim(), o3=$('f-o3').value.trim();
+  const c=parseInt($('f-c').value,10), e=$('f-e').value.trim();
+  const msg=$('adm-msg');
+  if(!q||!o1||!o2||!o3){ msg.className='status err'; msg.classList.remove('hidden'); msg.textContent='Заполните вопрос и все три варианта.'; return; }
+  const data={ question:q, options:[o1,o2,o3], correctIndex:c-1, explanation:e };
+  const o=getOverrides(); const id=$('f-id').value;
+  if(id){ o.edits[id]=data; }
+  else { o.added.push(Object.assign({id:'add'+Date.now(), source:'added'}, data)); }
+  setOverrides(o);
+  questions=buildActiveQuestions();
+  msg.className='status ok'; msg.classList.remove('hidden');
+  msg.textContent = id? 'Вопрос отредактирован. Правка сохранена локально — чтобы сделать её общей, перенесите её в Google Таблицу (см. выгрузку CSV).' : 'Вопрос добавлен локально. Чтобы вопрос увидели все посетители, перенесите его в Google Таблицу (см. выгрузку CSV).';
+  adminCloseForm(); renderAdminList();
+}
+function adminDelete(id){
+  if(!confirm('Удалить этот вопрос?')) return;
+  const o=getOverrides(); o.deleted.push(id); setOverrides(o);
+  questions=buildActiveQuestions(); renderAdminList(); adminShowMsg('Вопрос удалён локально. Не забудьте удалить строку и в Google Таблице.');
+}
+function adminShowMsg(t){ const m=$('adm-msg'); m.className='status ok'; m.classList.remove('hidden'); m.textContent=t; }
+function renderAdminList(){
+  if(!adminAuthed) return;
+  const term=($('adm-search').value||'').toLowerCase();
+  $('adm-count').textContent='— всего: '+questions.length;
+  const box=$('adm-list');
+  const list=questions.filter(q=>!term || q.question.toLowerCase().includes(term) || q.options.some(o=>o.toLowerCase().includes(term)));
+  if(!list.length){ box.innerHTML='<div class="empty">Ничего не найдено.</div>'; return; }
+  box.innerHTML=list.map(q=>{
+    const bad = !q.question || q.options.some(o=>!o) || q.correctIndex<0;
+    return '<div class="q-item"><div class="q-text'+(bad?' bad':'')+'">'+(bad?'⚠️ ':'')+esc(q.question)+'</div>'+
+      '<div style="color:var(--muted); margin-bottom:6px;">Верный: <b style="color:#a8e6c1;">'+esc(q.options[q.correctIndex]||'—')+'</b>'+(q.explanation?' · '+esc(q.explanation):'')+'</div>'+
+      '<div class="acts"><a onclick=\'adminOpenForm('+JSON.stringify(JSON.stringify(q))+')\'>Редактировать</a>'+
+      (q.source==='added'?'':'<a class="del" onclick="adminDelete(\''+q.id+'\')">Удалить</a>')+'</div></div>';
+  }).join('');
+}
+function exportCSV(){
+  const cell=v=>{ v=String(v==null?'':v); return /[",\n\r]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; };
+  const lines=['Вопрос,Вариант 1,Вариант 2,Вариант 3,Правильный ответ,Объяснение'];
+  for(const q of questions) lines.push([cell(q.question),cell(q.options[0]),cell(q.options[1]),cell(q.options[2]),cell(q.correctIndex+1),cell(q.explanation)].join(','));
+  const blob=new Blob(['\uFEFF'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='hockey_questions_full.csv'; a.click();
+  adminShowMsg('CSV скачан. Откройте Google Таблицу и перенесите изменения (Файл → Импорт → Заменить текущий лист), затем проверьте сайт на другом устройстве.');
+}
+function checkIntegrity(){
+  const bad=questions.filter(q=>!q.question || q.options.some(o=>!o) || q.correctIndex<0);
+  adminShowMsg(bad.length? ('Найдено проблемных строк: '+bad.length+'. Первые три: '+bad.slice(0,3).map(q=>'«'+(q.question||'(пусто)')+'»').join('; ')) : 'Все строки корректны ✅');
+}
+
+/* ================== НАВИГАЦИЯ ================== */
+const SCREENS=['home','quiz','result','history','admin'];
+function showScreen(name){
+  SCREENS.forEach(s=>{ const el=$('screen-'+s); if(el) el.classList.toggle('hidden', s!==name); });
+  document.querySelectorAll('nav a').forEach(a=>a.classList.remove('active'));
+  const nav=$('nav-'+(name==='result'?'home':name)); if(nav) nav.classList.add('active');
+  window.scrollTo(0,0);
+  if(name==='history') renderHistory();
+  if(name==='admin' && adminAuthed) renderAdminList();
+}
+
+/* ================== СТАРТ ================== */
+showScreen('home');
+loadQuestions();
+</script>
+</body>
+</html>
